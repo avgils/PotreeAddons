@@ -10,8 +10,11 @@ var INITIAL_WATER_HEIGHT = 0.2,
 var waterNormals, water;
 var scene_water, scene_skybox;
 var waterHeight = INITIAL_WATER_HEIGHT;
+var watershader = false;
 
 function initWaterShader() {
+	watershader = true;
+
 	adaptPotreeJS();
 
 	initWaterScene();
@@ -19,6 +22,12 @@ function initWaterShader() {
 }
 
 function onPointCloudLoaded() {
+	if (watershader) {
+		onLoaded();
+	}
+}
+
+function onLoaded() {
 	adaptViewerJS();
 	viewer.pointcloud.waterHeight = waterHeight;
 }
