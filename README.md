@@ -1,2 +1,2 @@
 # PotreeAddons
-Added functionality to the PotreeConverter output.
+Extra functionalities for the PotreeConverter output.
