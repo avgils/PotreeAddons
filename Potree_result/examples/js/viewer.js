@@ -198,6 +198,7 @@ Potree.Viewer = function(domElement, settings, args){
 	var pointcloudPath = defaultSettings.path;
 
 	var gui;
+	this.gui;
 	
 	this.renderer;
 	this.camera;
@@ -209,6 +210,19 @@ Potree.Viewer = function(domElement, settings, args){
 	this.measuringTool;
 	this.volumeTool;
 	this.transformationTool;
+	
+	var beforePointCloudRenderers = [];
+	this.addBeforePointCloudRenderer = function(listener) {
+		if (typeof listener === "function") {
+			beforePointCloudRenderers.push(listener);
+		}
+	};
+
+	var callRenderListeners = function() {
+		beforePointCloudRenderers.forEach(function(renderer){
+			renderer(this.renderer, this.camera);
+		}.bind(this));
+	}.bind(this);
 	
 	var skybox;
 	var stats;
@@ -292,6 +306,7 @@ Potree.Viewer = function(domElement, settings, args){
 		autoPlace: false
 			//height : 5 * 32 - 1
 		});
+		scope.gui = gui;
 		gui.domElement.style.position = "absolute";
 		gui.domElement.style.top = "5px";
 		gui.domElement.style.right = "5px";
@@ -1198,6 +1213,7 @@ Potree.Viewer = function(domElement, settings, args){
 			
 			// render scene
 			scope.renderer.render(scope.scene, scope.camera);
+			callRenderListeners();
 			scope.renderer.render(scope.scenePointCloud, scope.camera);
 			
 			scope.profileTool.render();
@@ -1331,6 +1347,7 @@ Potree.Viewer = function(domElement, settings, args){
 					
 					scope.scenePointCloud.overrideMaterial = depthMaterial;
 					scope.renderer.clearTarget( rtDepth, true, true, true );
+					callRenderListeners();
 					scope.renderer.render(scope.scenePointCloud, scope.camera, rtDepth);
 					scope.scenePointCloud.overrideMaterial = null;
 				}
@@ -1360,6 +1377,7 @@ Potree.Viewer = function(domElement, settings, args){
 					
 					scope.scenePointCloud.overrideMaterial = attributeMaterial;
 					scope.renderer.clearTarget( rtNormalize, true, true, true );
+					callRenderListeners();
 					scope.renderer.render(scope.scenePointCloud, scope.camera, rtNormalize);
 					scope.scenePointCloud.overrideMaterial = null;
 				}
@@ -1506,6 +1524,7 @@ Potree.Viewer = function(domElement, settings, args){
 					}
 					
 					scope.renderer.clearTarget( rtColor, true, true, true );
+					callRenderListeners();
 					scope.renderer.render(scope.scenePointCloud, scope.camera, rtColor);
 					
 					

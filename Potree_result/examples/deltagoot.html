@@ -20,6 +20,10 @@
 
 	<!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
 	<script src="./deltagoot.js"></script>
+	<script src="./water/watershader/Detector.js"></script>
+	<script src="./water/watershader/Mirror.js"></script>
+	<script src="./water/watershader/WaterShader.js"></script>
+	<script src="./water/watershader/watershader_init.js"></script>
 
 	<div id="renderArea" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
 
@@ -30,14 +34,11 @@
 	</div>
 
 	<script>
-		var onPointCloudLoaded = function(event){
-			// do stuff here that should be executed once the point cloud has been loaded.
-			// event.pointcloud returns the point cloud object			
-		};
-	
 		viewer = new Potree.Viewer(document.getElementById("renderArea"), sceneProperties, {
 			"onPointCloudLoaded": onPointCloudLoaded
 		});
+
+		initWaterShader();
 	</script>
 
 </body>
