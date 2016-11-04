@@ -195,9 +195,7 @@ Potree.Viewer = function(domElement, settings, args){
 
 	var progressBar = new ProgressBar();
 
-	var pointcloudPaths = defaultSettings.paths;
-	var selectedPointCloud = 0;
-	var pointcloudPath = pointcloudPaths[selectedPointCloud];;
+	var pointcloudPath = defaultSettings.path;
 
 	var gui;
 	this.gui;
@@ -319,7 +317,6 @@ Potree.Viewer = function(domElement, settings, args){
 			PointSize: scope.pointSize,
 			"FOV": scope.fov,
 			"opacity": scope.opacity,
-			"pointcloud index": selectedPointCloud,
 			"SizeType" : defaultSettings.sizeType,
 			"show octree" : false,
 			"Materials" : defaultSettings.material,
@@ -351,16 +348,6 @@ Potree.Viewer = function(domElement, settings, args){
 		var fFOV = fAppearance.add(params, 'FOV', 20, 100);
 		fFOV.onChange(function(value){
 			scope.fov = value;
-		});
-		
-		var pPointCloud = fAppearance.add(params, 'pointcloud index', 0, pointcloudPaths.length-1).step(1);
-		pPointCloud.onChange(function(value){
-			if (Math.round(value) === selectedPointCloud) {
-				return;
-			}
-
-			selectedPointCloud = Math.round(value);
-			scope.setPointCloud();
 		});
 		
 		var pOpacity = fAppearance.add(params, 'opacity', 0, 1);
@@ -756,17 +743,21 @@ Potree.Viewer = function(domElement, settings, args){
 		if(!pointcloudPath){
 			
 		}else if(pointcloudPath.indexOf("cloud.js") > 0){
-			scope.pointClouds = [];
-
-			var onLoaded = function() {
-				scope.pointcloud = scope.pointClouds[0];
-
+			Potree.POCLoader.load(pointcloudPath, function(geometry){
+				scope.pointcloud = new Potree.PointCloudOctree(geometry);
+				
+				scope.pointcloud.material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+				scope.pointcloud.material.size = scope.pointSize;
+				scope.pointcloud.visiblePointsTarget = scope.pointCountTarget * 1000 * 1000;
+				
+				referenceFrame.add(scope.pointcloud);
+				
 				referenceFrame.updateMatrixWorld(true);
 				var sg = scope.pointcloud.boundingSphere.clone().applyMatrix4(scope.pointcloud.matrixWorld);
-
+				
 				referenceFrame.position.copy(sg.center).multiplyScalar(-1);
 				referenceFrame.updateMatrixWorld(true);
-
+				
 				if(sg.radius > 50*1000){
 					scope.camera.near = 10;
 				}else if(sg.radius > 10*1000){
@@ -778,15 +769,17 @@ Potree.Viewer = function(domElement, settings, args){
 				}else{
 					scope.camera.near = 0.1;
 				}
-
-
+				
+				
 				scope.flipYZ();
 				scope.zoomTo(scope.pointcloud, 1);
-
-				scope.initGUI();
-
-				scope.earthControls.pointclouds.push(scope.pointcloud);
-
+				
+				scope.initGUI();	
+			
+				scope.earthControls.pointclouds.push(scope.pointcloud);	
+				
+				
+				
 				if(defaultSettings.navigation === "Earth"){
 					scope.useEarthControls();
 				}else if(defaultSettings.navigation === "Orbit"){
@@ -797,69 +790,27 @@ Potree.Viewer = function(domElement, settings, args){
 					console.warning("No navigation mode specified. Using OrbitControls");
 					scope.useOrbitControls();
 				}
-
+				
 				if(defaultSettings.cameraPosition != null){
 					var cp = new THREE.Vector3(defaultSettings.cameraPosition[0], defaultSettings.cameraPosition[1], defaultSettings.cameraPosition[2]);
 					scope.camera.position.copy(cp);
 				}
-
+				
 				if(defaultSettings.cameraTarget != null){
 					var ct = new THREE.Vector3(defaultSettings.cameraTarget[0], defaultSettings.cameraTarget[1], defaultSettings.cameraTarget[2]);
 					scope.camera.lookAt(ct);
-
+					
 					if(defaultSettings.navigation === "Orbit"){
 						scope.controls.target.copy(ct);
 					}
 				}
-
+				
 				scope.dispatchEvent({
 					"type": "pointcloud_loaded",
 					"pointcloud": scope.pointcloud
 				});
-			}
-
-			var numPointClouds = pointcloudPaths.length;
-			var i = 0;
-			var loadPointCloud = function() {
-				if (i >= numPointClouds) {
-					onLoaded();
-					return;
-				}
-
-				Potree.POCLoader.load(pointcloudPaths[i], function(geometry){
-					var pointcloud = new Potree.PointCloudOctree(geometry);
-
-					pointcloud.material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-					pointcloud.material.size = scope.pointSize;
-					// pointcloud.material.waterHeight = scope.waterHeight;
-					pointcloud.visiblePointsTarget = scope.pointCountTarget * 1000 * 1000;
-					pointcloud.visible = (i === 0);
-
-					referenceFrame.add(pointcloud);
-					scope.pointClouds.push(pointcloud);
-
-					i++;
-					loadPointCloud();
-				});
-			}
-
-		 	scope.setPointCloud = function() {
-				pointcloudPath = pointcloudPaths[selectedPointCloud];
-				scope.pointcloud = scope.pointClouds[selectedPointCloud];
-
-				for (var i = 0; i < scope.pointClouds.length; i++) {
-					scope.pointClouds[i].visible = i === selectedPointCloud;
-				}
-
-				return selectedPointCloud;
-			};
-
-			scope.nextPointCloud = function() {
-				selectedPointCloud = (selectedPointCloud + 1) % pointcloudPaths.length;
-				return setPointCloud();
-			};
-
-			loadPointCloud();
+				
+			});
 		}else if(pointcloudPath.indexOf(".vpc") > 0){
 			Potree.PointCloudArena4DGeometry.load(pointcloudPath, function(geometry){
 				scope.pointcloud = new Potree.PointCloudArena4D(geometry);
